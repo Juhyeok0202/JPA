@@ -42,28 +42,19 @@ public class Main {
             em.clear();
 
             // 컬렉션 페치 조인
-            String query = "select t from Team t join fetch t.members"; //지연로딩보다 fetch join이 우선
+            String query = "select distinct t from Team t join fetch t.members"; //지연로딩보다 fetch join이 우선
             List<Team> resultList = em.createQuery(query, Team.class)
                     .getResultList();
 
-            for (Team team : resultList) {
-                System.out.println("team = " + team.getName() + "|members=" + team.getMembers().size());
-                for (Member member : team.getMembers()) {
-                    System.out.println("->  member = " + member);
-
-                    /*OUTPUT
-
-                    team = 팀A|members=2
-                    ->  member = Member{id=3, username='회원1', age=0}
-                    ->  member = Member{id=4, username='회원2', age=0}
-                    team = 팀A|members=2 (위와 똑같은 팀 A임. 이미 영속성컨텍스트 위에 존재)
-                    ->  member = Member{id=3, username='회원1', age=0}
-                    ->  member = Member{id=4, username='회원2', age=0}
-                    team = 팀B|members=1
-                    ->  member = Member{id=5, username='회원3', age=0}
-                     */
-                }
-            }
+            System.out.println("resultList.size() = " + resultList.size());
+            /*
+            [select t from Team] t -> size 2
+            [select t from Team t join fetch t.members] -> size 3 (join하며 TeamA의 data가 늘어남.중복.)
+            [select distinct t from Team t join fetch t.members] -> size 2
+            위 쿼리는 ID(PK)그리고 NAME까지 모~두 같아야 distinct가 적용된다.
+            하지만, JPA에서 위 쿼리의 결과가 application으로 올라올 때, 중복된 엔티티를 제거한다.
+            같은 식별자를 가진 것을 제거
+             */
 
             tx.commit();
         } catch (Exception e) {
