@@ -38,23 +38,22 @@ public class Main {
             member3.changeTeam(teamB);
             em.persist(member3);
 
-            em.flush();
-            em.clear();
+            //FLUSH 자동 호출 commit, query, 강제호출
+            //DB 동기화는 됐으나, 영속성 컨텍스트에는 20살 반영이 안되어있음 -> clear필요
+            //Application과 DB의 값이 달라짐.
+            // 벌크연산을 먼저 하거나 벌크연산 이후 영속성컨텍스트 clear 필요
+            int resultCount = em.createQuery("update Member m set m.age = 20")
+                    .executeUpdate();
+            System.out.println("====BEFORE===="); //0
+            Member findMember_before = em.find(Member.class, member1.getId());
+            System.out.println("findMember.getAge() = " + findMember_before.getAge());
 
-            // 컬렉션 페치 조인
-            String query = "select distinct t from Team t join fetch t.members"; //지연로딩보다 fetch join이 우선
-            List<Team> resultList = em.createQuery(query, Team.class)
-                    .getResultList();
+            em.clear(); //기존 것들 준영속으로 만드니 주의
 
-            System.out.println("resultList.size() = " + resultList.size());
-            /*
-            [select t from Team] t -> size 2
-            [select t from Team t join fetch t.members] -> size 3 (join하며 TeamA의 data가 늘어남.중복.)
-            [select distinct t from Team t join fetch t.members] -> size 2
-            위 쿼리는 ID(PK)그리고 NAME까지 모~두 같아야 distinct가 적용된다.
-            하지만, JPA에서 위 쿼리의 결과가 application으로 올라올 때, 중복된 엔티티를 제거한다.
-            같은 식별자를 가진 것을 제거
-             */
+            System.out.println("====AFTER===="); //20
+            Member findMember_after = em.find(Member.class, member1.getId());
+            System.out.println("findMember.getAge() = " + findMember_after.getAge());
+            System.out.println("resultCount = " + resultCount);
 
             tx.commit();
         } catch (Exception e) {
@@ -66,3 +65,4 @@ public class Main {
         emf.close();
     }
 }
+
