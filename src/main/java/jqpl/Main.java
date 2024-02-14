@@ -41,27 +41,28 @@ public class Main {
             em.flush();
             em.clear();
 
-            String query = "select m from Member m join fetch m.team"; //지연로딩보다 fetch join이 우선
-            List<Member> resultList = em.createQuery(query, Member.class)
+            // 컬렉션 페치 조인
+            String query = "select t from Team t join fetch t.members"; //지연로딩보다 fetch join이 우선
+            List<Team> resultList = em.createQuery(query, Team.class)
                     .getResultList();
 
-            for (Member member : resultList) {
-                System.out.println("member = " + member.getUsername() + member.getTeam().getName());
+            for (Team team : resultList) {
+                System.out.println("team = " + team.getName() + "|members=" + team.getMembers().size());
+                for (Member member : team.getMembers()) {
+                    System.out.println("->  member = " + member);
 
-                /*일반 Inner Join*/
-                //회원1, 팀A(SQL)
-                //회원2, 팀A(1차캐시)
-                //회원3, 팀B(SQL)
+                    /*OUTPUT
 
-                //회원 100명 -> N + 1
-
-                /*Fetch Join*/
-                //회원1, 팀A(1차캐시)
-                //회원2, 팀A(1차캐시)
-                //회원3, 팀B(1차캐시)
-
-                //회원 100명 -> 1 (Proxy가 아닌, 처음부터 Join하여 가져와 영속성 컨텍스트에 올려둠)
-
+                    team = 팀A|members=2
+                    ->  member = Member{id=3, username='회원1', age=0}
+                    ->  member = Member{id=4, username='회원2', age=0}
+                    team = 팀A|members=2 (위와 똑같은 팀 A임. 이미 영속성컨텍스트 위에 존재)
+                    ->  member = Member{id=3, username='회원1', age=0}
+                    ->  member = Member{id=4, username='회원2', age=0}
+                    team = 팀B|members=1
+                    ->  member = Member{id=5, username='회원3', age=0}
+                     */
+                }
             }
 
             tx.commit();
